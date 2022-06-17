@@ -157,6 +157,7 @@ Trie init_keywords(void) {
 
     return keywords;
 }
+
 int main(void) {
     initscr(); 
     if (has_colors() == FALSE) {
@@ -180,7 +181,7 @@ int main(void) {
     noecho();
     
     print_header(0);
-
+    
     get_input(keywords);
     
     endwin();

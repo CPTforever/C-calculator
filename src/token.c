@@ -2,42 +2,42 @@
 #include "token.h"
 #include "helper.h"
 
+// This encapsulates the Token tree that will be the public struct for this file
 typedef struct TokenObj* Token;
 
 typedef struct TokenObj {
     char *literal; 
     token_type type;
-    Token prev;
-    Token next;
+    Token *children;
+    int children_len;
+    Token parent;
 } TokenObj;
 
-typedef struct TokenListObj* TokenList;
+typedef struct TokenTreeObj* TokenTree;
 
-typedef struct TokenListObj {
-    Trie keywords;
-    uint32_t length;
-    uint32_t index;
-    Token first;
-    Token last;
-    Token cursor;
-
-} TokenListObj;
+typedef struct TokenTreeObj {
+    Token root;
+} TokenTreeObj;
 
 Token create_token(char *literal, token_type type, size_t n) {
     Token T = malloc(sizeof(TokenObj));
 
     T->literal = strndup(literal, n);
-    T->type = type;
-
-    T->prev = NULL;
-    T->next = NULL;
-    T->cursor = NULL;
+    T->children = NULL;
+    T->parent = NULL;
+    T->children_len = 0;
     return T; 
 }
 
+// Recursively frees a token and it's children
 void delete_token(Token *pT) {
     if (pT != NULL && *pT != NULL) {
         free((*pT)->literal);
+        if (T->children != NULL) {
+            for (int i = 0; i < T->children_len; i++) {
+                delete_token(&(T->children[i]));
+            }
+        }
         free(*pT);
         *pT = NULL;
     }
@@ -45,81 +45,14 @@ void delete_token(Token *pT) {
     return;
 }
 
-TokenList create_token_list(Trie keywords) {
-    TokenList TL = malloc(sizeof(TokenListObj));
-    
-    TL->length = 0;
-    TL->keywords = keywords;
-    
-    TL->first = NULL;
-    TL->last = NULL;
-
-    return TL;
-}
-
-void delete_token_list(TokenList *pTL) {
-    if (pTL != NULL && *pTL != NULL) {
-        while ((*pTL)->length > 0) {
-            pop_token(*pTL);
-        }
-
-        free(*pTL);
-        *pTL = NULL;
-    }
-    return;
-}
-
-int token_list_length(TokenList TL) {
-    error(TL == NULL, "Error: token_list_length() access NULL TL pointer");
-
-    return TL->length;
-}
-
-void append_token(TokenList TL, char *literal, size_t n, token_type type) {
-    if (n == 0) {
-        return;
-    }
-    
-    Token T = create_token(literal, type, n);
-    
-    if (TL->length == 0) {
-        TL->first = T;
-        TL->last = T;
-    } 
-    else {
-        // new last prev is old last
-        T1->prev = TL->last;
-        // old last next is new last
-        TL->last->next = T;
-        // last pointer is new last
-        TL->last = T;
-    }
-
-    TL->length++;
-}
-
-void pop_token(TokenList TL) {
-    error(TL == NULL, "Error: pop_token() access NULL TL pointer");
-    error(token_list_length(TL) == 0, "Error: pop_token() token list is empty\n");
-    
-    if (token_list_length(TL) > 1) {
-        Token T = TL->last;
-        TL->last = TL->last->prev;
-        TL->last->next = NULL;
-        delete_token(&T);
-    }
-    else {
-        delete_token(&(TL->first));
-        TL->last = NULL;
-    }
-    TL->length--;
-    return;
-}
-
-void parse_token_list(TokenList TL, char *str) {
+TokenList create_token_list(char *str) {
     if (str == NULL) {
-        return;
+        return NULL;
     }
+    
+    int stackSize = 100;
+    Token *stack = calloc(sizeof(Token), stackSize);
+    int top = 0;
 
     bool is_var = false;
     bool is_num = false;
@@ -137,24 +70,24 @@ void parse_token_list(TokenList TL, char *str) {
         }
 
         if (is_num && !is_number(str[index + 1])) {
-            append_token(TL, str + start, index - start + 1, TYPE_NUMBER);
+            append_token(TL, str + start, index - start + 1, T_NUM);
             is_num = false;
         }
         if (is_var && !is_alphanum(str[index + 1])) {
             if (TL->keywords != NULL && trie_query(TL->keywords, str + start, index - start)) {
-                append_token(TL, str + start, index - start + 1, TYPE_FUNCTION);
+                append_token(TL, str + start, index - start + 1, T_FUNC);
             }
             else {
-                append_token(TL, str + start, index - start + 1, TYPE_VARIABLE);
+                append_token(TL, str + start, index - start + 1, T_VAR);
             }
 
             is_var = false;
         }
         if ((!is_var || !is_num) && is_operator(str[index])) {
-            append_token(TL, str + index, 1, TYPE_OPERATOR);
+            append_token(TL, str + index, 1, T_OP);
         }
         if ((!is_var || !is_num) && is_bracket(str[index])) {
-            append_token(TL, str + index, 1, TYPE_BRACKET);
+            append_token(TL, str + index, 1, T_BRACE);
         }
 
         index++;
@@ -169,5 +102,12 @@ void print_token_list(TokenList TL) {
     }
 }
 
+int main(void) {
+    TokenList TL = create_token_list(NULL);
 
+    parse_token_list(TL, "4sin(x) + 4");
+
+    print_token_list(TL);
+
+    return 0;
 }

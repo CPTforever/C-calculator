@@ -7,7 +7,7 @@
 
 #include "trie.h"
 
-typedef enum {TYPE_UNDEFINED, TYPE_NUMBER, TYPE_VARIABLE, TYPE_FUNCTION, TYPE_OPERATOR, TYPE_BRACKET} token_type;
+typedef enum {T_UNDEF, T_NUM, T_VAR, T_FUNC, T_OP, T_BRACE} token_type;
 
 typedef struct TokenListObj* TokenList;
 
